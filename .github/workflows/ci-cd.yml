@@ -24,7 +24,7 @@ jobs:
         run: docker build -t frontend-app ./frontend
 
       - name: Start stack with Docker Compose
-        run: docker compose up -d --build
+        run: docker compose -f ./docker-compose.yml up -d --build
 
       - name: Wait for services to be ready
         run: |
@@ -36,7 +36,7 @@ jobs:
             sleep 2
           done
           echo "Services failed to start ❌"
-          docker compose logs
+          docker compose -f ./docker-compose.yml logs
           exit 1
 
       - name: Backend API sanity test
@@ -50,4 +50,4 @@ jobs:
 
       - name: Tear down
         if: always()
-        run: docker compose down -v
+        run: docker compose -f ./docker-compose.yml down -v
