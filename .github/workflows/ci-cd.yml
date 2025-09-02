@@ -1,0 +1,53 @@
+name: CI — Build & Test Dockerized App
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build backend image
+        run: docker build -t backend-app ./backend
+
+      - name: Build frontend image
+        run: docker build -t frontend-app ./frontend
+
+      - name: Start stack with Docker Compose
+        run: docker compose up -d --build
+
+      - name: Wait for services to be ready
+        run: |
+          for i in {1..30}; do
+            (curl -sSf http://localhost:5000/ >/dev/null) && \
+            (curl -sSf http://localhost:3000/ >/dev/null) && \
+            { echo "Services are up ✅"; exit 0; }
+            echo "Waiting for services… ($i/30)"
+            sleep 2
+          done
+          echo "Services failed to start ❌"
+          docker compose logs
+          exit 1
+
+      - name: Backend API sanity test
+        run: |
+          curl -s -X POST http://localhost:5000/products \
+            -H "Content-Type: application/json" \
+            -d '{"id":1,"name":"Laptop","price":800}'
+          echo
+          curl -s http://localhost:5000/products
+          echo
+
+      - name: Tear down
+        if: always()
+        run: docker compose down -v
